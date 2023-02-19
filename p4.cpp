@@ -27,7 +27,7 @@ int main(int argc, char* argv[]) {
     if (argc < 2) {
         return -1;
     }
-    int cumCars = std::stoi(argv[1]);
+    int cumCarsNum = std::stoi(argv[1]);
     
 }
 
@@ -40,6 +40,10 @@ bool eightyCoin()   {
     else    {
         return false;
     }
+}
+
+int logCar(int carID, char dir, clock_t arrival_time, clock_t start_time, clock_t end_time) {
+    
 }
 
 
