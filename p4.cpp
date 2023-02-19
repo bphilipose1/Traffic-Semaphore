@@ -20,3 +20,11 @@ int pthread_sleep (int seconds) {
     timetoexpire.tv_nsec = 0;
     return pthread_cond_timedwait(&conditionvar, &mutex, &timetoexpire);
 }
+
+int main(int argc, char* argv[]) {
+    if (argc < 2) {
+        return -1;
+    }
+    int cumCars = std::stoi(argv[1]);
+    
+}
