@@ -4,7 +4,10 @@
 #include <time.h>
 #include <iostream>
 #include <cstdlib>
+#include <string>
+#include <fstream>
 
+using namespace std;
 
 int pthread_sleep (int seconds) {
     pthread_mutex_t mutex;
@@ -43,7 +46,23 @@ bool eightyCoin()   {
 }
 
 int logCar(int carID, char dir, clock_t arrival_time, clock_t start_time, clock_t end_time) {
-    
+    ofstream logfile("car.log");
+    if (logfile.is_open()) {
+        logfile << carID << "," << dir << "," << arrival_time << "," << start_time << "," << end_time << "\n";
+        logfile.close(); // close the file
+    } else {
+        error -2;
+    }
+}
+
+int logFlag(clock_t timeStamp, String State) {
+    ofstream logfile("flagperson.log");
+    if (logfile.is_open()) {
+        logfile << timeStamp << "," << State << "\n";
+        logfile.close(); // close the file
+    } else {
+        error -2;
+    }
 }
 
 
