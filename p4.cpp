@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <time.h>
+#include <iostream>
+#include <cstdlib>
 
 
 int pthread_sleep (int seconds) {
@@ -28,3 +30,16 @@ int main(int argc, char* argv[]) {
     int cumCars = std::stoi(argv[1]);
     
 }
+
+bool eightyCoin()   {
+    srand(time(NULL)); 
+    int coin = (rand() % 10) + 1;
+    if(coin <= 8)   {
+        return true;
+    }
+    else    {
+        return false;
+    }
+}
+
+
