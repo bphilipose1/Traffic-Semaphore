@@ -105,35 +105,51 @@ sem_t empty;
 
 void* flagHandler(void* x) {
     int totCars = *((int*) x); //see how many cars are allowed to pass cumulative 
-    char laneState = 'N';   //used to state which lane is currently being allowed to pass
+    char laneState = N;   //used to state which lane is currently being allowed to pass
     int n_size=0;
     int s_size=0;
+    car cartempn;
+    car cartemps;
     clock_t tempSleepTime=0;
     clock_t tempAwakeTime=0;
     while(totCars != 0)    {
-        tempSleepTime = //get current time
+        tempSleepTime = time(nullptr);
         sem_wait(&empty);   //will sleep thread if there is no cars waiting in either queues
-        tempAwakeTime= //get current time
+        tempAwakeTime = time(nullptr);
         sem_wait(&mutex);
+
+        cartempn=northTrafficQueue.front()->arrivalTime;
+        cartemps=southTrafficQueue.front()->arrivalTime;
         s_size = getSouthSize();
         n_size = getNorthSize();
+
+
         if(s_size>=10) {    //checks if any backups needed flow
-            laneState = "S";
+            laneState = 'S';
         }
-        if(n_size>=10) {    //checks if any backups needed flow
-            laneState = "N";
+        else if(n_size>=10) {    //checks if any backups needed flow
+            laneState = 'N';
+        }
+
+        //if statement to check which lane should be allowed to pass first
+        if(s_size==0)   {
+            laneState = 'N';
+        }
+        else    {
+            laneState = 'S';
         }
         switch (laneState)  {
             case 'N':
                 //take a car from N queue
                 break;
-            
             case 'S':
                 //take a car from S queue
                 break;
             default:
                 return -1;
         }
+
+        
         sem_wait(&mutex);
 
 
