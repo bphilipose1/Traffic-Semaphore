@@ -26,14 +26,6 @@ int pthread_sleep (int seconds) {
     return pthread_cond_timedwait(&conditionvar, &mutex, &timetoexpire);
 }
 
-int main(int argc, char* argv[]) {
-    if (argc < 2) {
-        return -1;
-    }
-    int cumCarsNum = std::stoi(argv[1]);
-    
-}
-
 bool eightyCoin()   {
     srand(time(NULL)); 
     int coin = (rand() % 10) + 1;
@@ -65,4 +57,46 @@ int logFlag(clock_t timeStamp, String State) {
     }
 }
 
+void carCross(car* crossingCar)  {
+    //put car thread to sleep for 1 second
+}
 
+int main(int argc, char* argv[]) {
+    if (argc < 2) {
+        return -1;
+    }
+    int cumCarsNum = stoi(argv[1]);
+    
+
+
+    car* northQueue;
+    car* southQueue;
+
+    //create producer, and their thread function  (car generators for North and South queue is producer)
+    //create consumer, and their thread function  (flag person consumes cars in queue)
+
+    //NOTE: THERE IS RACE CONDITION ON SHARED RESOURCE OF THE NORTH AND SOUTH QUEUES
+    //use mutex lock for modification of queues
+
+    //start generating cars and add them into North/South Queue
+        //each car is a seperate thread
+            //create and detach thread
+
+    //FLAG PERSON BEHAVIOR:
+    /*
+    if car_arrives
+        allow traffic from that direction to pass
+    
+    only stop letting cars pass if 1 of 2 conditions occur
+        1. no more cars are coming from that direction
+            a. let cars from other direction pass.
+            b. if no cars are in either lanes, put flag person is false
+        2. there are 10+ cars waiting in the other direction
+            switch and let those cars cross.
+    
+    NOTE: to simulate car crossing behavior, we put the car thread to "sleep" for 1 second, then we can delete the thread...
+    
+    */
+
+    
+}
