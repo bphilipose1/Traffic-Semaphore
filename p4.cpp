@@ -57,8 +57,13 @@ int logFlag(clock_t timeStamp, String State) {
     }
 }
 
-void carCross(car* crossingCar)  {
-    //put car thread to sleep for 1 second
+void* carCross(void* arrivalTime)  {    //function that thread will execute when crossing construction area
+    time_t a_time = *((time_t*)arrivalTime);
+    time_t s_time = time(0);//time car starts to cross construction lane
+    pthread_sleep(1);//car is crossing construction lane
+    time_t e_time = time(0);//time car finishes crossing construction lane
+    logCar(/*carID*/,/*car direction*/,a_time, s_time, e_time);
+    return NULL;
 }
 
 int main(int argc, char* argv[]) {
@@ -67,10 +72,6 @@ int main(int argc, char* argv[]) {
     }
     int cumCarsNum = stoi(argv[1]);
     
-
-
-    car* northQueue;
-    car* southQueue;
 
     //create producer, and their thread function  (car generators for North and South queue is producer)
     //create consumer, and their thread function  (flag person consumes cars in queue)
@@ -100,3 +101,4 @@ int main(int argc, char* argv[]) {
 
     
 }
+
