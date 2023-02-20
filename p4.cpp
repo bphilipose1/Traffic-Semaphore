@@ -9,6 +9,14 @@
 
 using namespace std;
 
+struct car { 
+    int carID;
+    char directions;
+    string arrivalTime;
+    string startTime;
+    string endTime;
+};
+
 int pthread_sleep (int seconds) {
     pthread_mutex_t mutex;
     pthread_cond_t conditionvar;
