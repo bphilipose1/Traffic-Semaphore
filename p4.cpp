@@ -6,15 +6,14 @@
 #include <cstdlib>
 #include <string>
 #include <fstream>
+#include <semaphore.h>
 
 using namespace std;
 
 struct car { 
     int carID;
     char directions;
-    string arrivalTime;
-    string startTime;
-    string endTime;
+    time_t arrivalTime;
 };
 
 int pthread_sleep (int seconds) {
@@ -78,37 +77,110 @@ void* carCross(void* arrivalTime, void* carID, void* direc)  {    //function tha
 }
 
 
-void* carxProducerFunc(void* totCars, void* dir)    {
-    int totalCars = *((int*)totCars);
-    char direction = *((char*)dir);
-    for(int i = 0; i<totalCars; i++)    {
-        //create car objects
+//------------------------BENS SECTION OF HELPER CODE-------------------------
+
+queue<car> northTrafficQueue;
+queue<car> southTrafficQueue;
+sem_t mutex;
+sem_t empty;
+
+
+void* flagHandler(void* x) {
+    int totCars = *((int*) x); //see how many cars are allowed to pass cumulative 
+    char laneState = N;   //used to state which lane is currently being allowed to pass
+    int n_size=0;
+    int s_size=0;
+    car cartempn;
+    car cartemps;
+    clock_t tempSleepTime=0;
+    clock_t tempAwakeTime=0;
+    while(totCars != 0)    {
+        tempSleepTime = time(nullptr);
+        sem_wait(&empty);   //will sleep thread if there is no cars waiting in either queues
+        tempAwakeTime = time(nullptr);
+        sem_wait(&mutex);
+
+        cartempn=northTrafficQueue.front()->arrivalTime;
+        cartemps=southTrafficQueue.front()->arrivalTime;
+        s_size = getSouthSize();
+        n_size = getNorthSize();
+
+
+        if(s_size>=10) {    //checks if any backups needed flow
+            laneState = 'S';
+        }
+        else if(n_size>=10) {    //checks if any backups needed flow
+            laneState = 'N';
+        }
+
+        //if statement to check which lane should be allowed to pass first
+        if(s_size==0)   {
+            laneState = 'N';
+        }
+        else    {
+            laneState = 'S';
+        }
+        switch (laneState)  {
+            case 'N':
+                //take a car from N queue
+                break;
+            case 'S':
+                //take a car from S queue
+                break;
+            default:
+                return -1;
+        }
+
+        
+        sem_wait(&mutex);
+
+
+        if(tempSleepTime < tempAwakeTime)  {// logging flagperson behavior
+            logFlag(tempSleepTime, "sleep");
+            logFlag(tempAwakeTime, "woken-up");
+        }
+
+        //NOTE:CHECK IF WHAT IS CRITICAL SECTION IN THIS CODE
+        
     }
-    if(direction = "N")    {
-        //add to north queue
-    }
-    else if(direction = "S")    {
-        //add to south queue
-    }
-    else    {
-        return -1;
-    }
-    //set car objects arrival time parameter = time(0);
+    
+
+}
+
+int getNorthSize()   {
+    int nSize = southTrafficQueue.size();
+    return nSize;
+}
+int getSouthSize()   {
+    int sSize = northTrafficQueue.size();
+    return sSize;
 }
 
 
-
+//------------------------BENS SECTION OF HELPER CODE-------------------------
 int main(int argc, char* argv[]) {
     if (argc < 2) {
         return -1;
     }
     int cumCarsNum = stoi(argv[1]);
-    
+    pthread_t consumerThread;
+    //initializing mutex lock and empty semaphores for mutual exclusion/synchronization
+    sem_init(&mutex, 0, 1);
+    sem_init(&empty, 0, 0);
+
+
 
     //create producer, and their thread function  (car generators for North and South queue is producer)
 
     //create consumer, and their thread function  (flag person consumes cars in queue)
+    if(pthread_create(&consumerThread, NULL, &flagHandler, (void *) cumCarsNum)) {
+        perror("Pthread_create failed");
+        exit(-1);
+    }
 
+    //deleting semaphores
+    sem_destroy(&mutex);
+    sem_destroy(&empty);
 
     //NOTE: THERE IS RACE CONDITION ON SHARED RESOURCE OF THE NORTH AND SOUTH QUEUES
     //use mutex lock for modification of queues
