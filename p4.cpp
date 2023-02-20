@@ -84,17 +84,6 @@ void* produceCars(void* totCars, void* dir){
     int totalCars = *((int*)totCars);
     struct car newCar;
 
-    while(cars <= totalCars) { // produces cars, then locks flagger that is not needed
-        if(direction == 'N'){
-            pthread_mutex_lock(&mutexFlaggerN);
-        }
-        else if (direction == 'S'){
-            pthread_mutex_lock(&mutexFlaggerS);
-        }
-        else {
-            return NULL;
-        }
-
         if(eightyCoin == true) { // based on num, will unlock corresponding flagger and car thread
             pthread_mutex_unlock((direction == 'N') ? &mutexFlaggerN : &mutexFlaggerS);
             pthread_mutex_unlock((direction == 'N') ? &mutexNumCarsN : &mutexNumCarsS);
@@ -110,10 +99,10 @@ void* produceCars(void* totCars, void* dir){
         // conditional operator, returns based on condition
         // in this case either unlocks mutexNumCarsN or mtexNumCarsS based on direction 
         if(direction == 'N'){ // puts cars on queue based on direction
-            northCarQueue.push(newCar);
+            northTrafficQueue.push(newCar);
         }
         else{
-            southCarQueue.push(newCar);
+            southTrafficQueue.push(newCar);
         }        
 
         //
