@@ -26,7 +26,8 @@ int pthread_sleep (int seconds) {
     return pthread_cond_timedwait(&conditionvar, &mutex, &timetoexpire);
 }
 
-struct car {
+// lets us make queue of type car
+struct car { 
 int carID;
 char directions;
 string arrivalTime;
@@ -34,8 +35,8 @@ string startTime;
 string endTime;
 };
 
-queue <car> south;
-queue <car> north;
+queue <car> south; // queue of cars going south
+queue <car> north; // queue of cars going north
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
