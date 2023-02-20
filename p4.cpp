@@ -12,9 +12,7 @@ using namespace std;
 struct car { 
     int carID;
     char directions;
-    string arrivalTime;
-    string startTime;
-    string endTime;
+    time_t arrivalTime;
 };
 
 int pthread_sleep (int seconds) {
@@ -110,8 +108,12 @@ void* flagHandler(void* x) {
     char laneState = 'N';   //used to state which lane is currently being allowed to pass
     int n_size=0;
     int s_size=0;
+    clock_t tempSleepTime=0;
+    clock_t tempAwakeTime=0;
     while(totCars != 0)    {
+        tempSleepTime = //get current time
         sem_wait(&empty);   //will sleep thread if there is no cars waiting in either queues
+        tempAwakeTime= //get current time
         sem_wait(&mutex);
         s_size = getSouthSize();
         n_size = getNorthSize();
@@ -133,6 +135,12 @@ void* flagHandler(void* x) {
                 return -1;
         }
         sem_wait(&mutex);
+
+
+        if(tempSleepTime < tempAwakeTime)  {// logging flagperson behavior
+            logFlag(tempSleepTime, "sleep");
+            logFlag(tempAwakeTime, "woken-up");
+        }
 
         //NOTE:CHECK IF WHAT IS CRITICAL SECTION IN THIS CODE
         
