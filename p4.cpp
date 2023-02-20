@@ -69,6 +69,27 @@ void* carCross(void* arrivalTime, void* carID, void* direc)  {    //function tha
     return NULL;
 }
 
+
+void* carxProducerFunc(void* totCars, void* dir)    {
+    int totalCars = *((int*)totCars);
+    char direction = *((char*)dir);
+    for(int i = 0; i<totalCars; i++)    {
+        //create car objects
+    }
+    if(direction = "N")    {
+        //add to north queue
+    }
+    else if(direction = "S")    {
+        //add to south queue
+    }
+    else    {
+        return -1;
+    }
+    //set car objects arrival time parameter = time(0);
+}
+
+
+
 int main(int argc, char* argv[]) {
     if (argc < 2) {
         return -1;
@@ -77,7 +98,9 @@ int main(int argc, char* argv[]) {
     
 
     //create producer, and their thread function  (car generators for North and South queue is producer)
+
     //create consumer, and their thread function  (flag person consumes cars in queue)
+
 
     //NOTE: THERE IS RACE CONDITION ON SHARED RESOURCE OF THE NORTH AND SOUTH QUEUES
     //use mutex lock for modification of queues
