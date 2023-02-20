@@ -106,7 +106,7 @@ sem_t empty;
 
 
 void* flagHandler(void* x) {
-    int totCars = *((int*) x);
+    int totCars = *((int*) x); //see how many cars are allowed to pass cumulative 
     char laneState = 'N';   //used to state which lane is currently being allowed to pass
     int n_size=0;
     int s_size=0;
@@ -167,17 +167,10 @@ int main(int argc, char* argv[]) {
     //create producer, and their thread function  (car generators for North and South queue is producer)
 
     //create consumer, and their thread function  (flag person consumes cars in queue)
-    if(pthread_create(&childThread, NULL, &fibNum, (void *) cumCarsNum)) {
+    if(pthread_create(&consumerThread, NULL, &flagHandler, (void *) cumCarsNum)) {
         perror("Pthread_create failed");
         exit(-1);
     }
-
-
-
-
-
-
-
 
     //deleting semaphores
     sem_destroy(&mutex);
