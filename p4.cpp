@@ -26,6 +26,14 @@ int pthread_sleep (int seconds) {
     return pthread_cond_timedwait(&conditionvar, &mutex, &timetoexpire);
 }
 
+struct car {
+int carID;
+char directions;
+string arrivalTime;
+string startTime;
+string endTime;
+};
+
 int main(int argc, char* argv[]) {
     if (argc < 2) {
         return -1;
