@@ -6,7 +6,7 @@
 #include <cstdlib>
 #include <string>
 #include <fstream>
-
+#include <semaphore.h>
 using namespace std;
 
 struct car { 
@@ -97,18 +97,91 @@ void* carxProducerFunc(void* totCars, void* dir)    {
 }
 
 
+//------------------------BENS SECTION OF HELPER CODE-------------------------
 
+queue<car> northTrafficQueue;
+queue<car> southTrafficQueue;
+sem_t mutex;
+sem_t empty;
+
+
+void* flagHandler(void* x) {
+    int totCars = *((int*) x);
+    char laneState = 'N';   //used to state which lane is currently being allowed to pass
+    int n_size=0;
+    int s_size=0;
+    while(totCars != 0)    {
+        sem_wait(&empty);   //will sleep thread if there is no cars waiting in either queues
+        sem_wait(&mutex);
+        s_size = getSouthSize();
+        n_size = getNorthSize();
+        if(s_size>=10) {    //checks if any backups needed flow
+            laneState = "S";
+        }
+        if(n_size>=10) {    //checks if any backups needed flow
+            laneState = "N";
+        }
+        switch (laneState)  {
+            case 'N':
+                //take a car from N queue
+                break;
+            
+            case 'S':
+                //take a car from S queue
+                break;
+            default:
+                return -1;
+        }
+        sem_wait(&mutex);
+
+        //NOTE:CHECK IF WHAT IS CRITICAL SECTION IN THIS CODE
+        
+    }
+    
+
+}
+
+int getNorthSize()   {
+    int nSize = southTrafficQueue.size();
+    return nSize;
+}
+int getSouthSize()   {
+    int sSize = northTrafficQueue.size();
+    return sSize;
+}
+
+
+//------------------------BENS SECTION OF HELPER CODE-------------------------
 int main(int argc, char* argv[]) {
     if (argc < 2) {
         return -1;
     }
     int cumCarsNum = stoi(argv[1]);
-    
+    pthread_t consumerThread;
+    //initializing mutex lock and empty semaphores for mutual exclusion/synchronization
+    sem_init(&mutex, 0, 1);
+    sem_init(&empty, 0, 0);
+
+
 
     //create producer, and their thread function  (car generators for North and South queue is producer)
 
     //create consumer, and their thread function  (flag person consumes cars in queue)
+    if(pthread_create(&childThread, NULL, &fibNum, (void *) cumCarsNum)) {
+        perror("Pthread_create failed");
+        exit(-1);
+    }
 
+
+
+
+
+
+
+
+    //deleting semaphores
+    sem_destroy(&mutex);
+    sem_destroy(&empty);
 
     //NOTE: THERE IS RACE CONDITION ON SHARED RESOURCE OF THE NORTH AND SOUTH QUEUES
     //use mutex lock for modification of queues
