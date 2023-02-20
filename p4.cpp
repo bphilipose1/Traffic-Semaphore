@@ -78,3 +78,50 @@ int logFlag(clock_t timeStamp, String State) {
 }
 
 
+
+void* produceCars(void* totCars, void* dir){
+    char direction = *((char*) dir);
+    int totalCars = *((int*)totCars);
+    struct car newCar;
+
+    while(cars <= totalCars) { // produces cars, then locks flagger that is not needed
+        if(direction == 'N'){
+            pthread_mutex_lock(&mutexFlaggerN);
+        }
+        else if (direction == 'S'){
+            pthread_mutex_lock(&mutexFlaggerS);
+        }
+        else {
+            return NULL;
+        }
+
+        if(eightyCoin == true) { // based on num, will unlock corresponding flagger and car thread
+            pthread_mutex_unlock((direction == 'N') ? &mutexFlaggerN : &mutexFlaggerS);
+            pthread_mutex_unlock((direction == 'N') ? &mutexNumCarsN : &mutexNumCarsS);
+            return NULL;
+        }
+
+        pthread_mutex_lock((direction == 'N') ? &mutexNumCarsN : &mutexNumCarsS);
+        newCar.dir = direction;
+        newCar.arrival = arrivalTime;
+        newCar.carID = numCars;
+        numCars++;
+        pthread_mutex_unlock((direction == 'N') ? &mutexNumCarsN : &mutexNumCarsS);
+        // conditional operator, returns based on condition
+        // in this case either unlocks mutexNumCarsN or mtexNumCarsS based on direction 
+        if(direction == 'N'){ // puts cars on queue based on direction
+            northCarQueue.push(newCar);
+        }
+        else{
+            southCarQueue.push(newCar);
+        }        
+
+        //
+        pthread_mutex_unlock((direction == 'N') ? &mutexFlaggerN : &mutexFlaggerS);
+        // unlocks flagger mutex based on direction
+        pthread_sleep(20); // sleep for 20 seconds
+    }
+
+    return NULL;
+}
+
