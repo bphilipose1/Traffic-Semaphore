@@ -22,6 +22,7 @@ void* southCarGenerator(void* totaC);
 void* flagHandler(void* x);
 int getNorthSize();
 int getSouthSize();
+string converter(time_t convert);
 //------------------------------------yonnas--------------------------
 
 struct car { 
@@ -55,14 +56,32 @@ int pthread_sleep (int seconds) {
     return pthread_cond_timedwait(&conditionvar, &mutex, &timetoexpire);
 }
 
+string converter(time_t convert)    {
+    time_t convert = time(nullptr); // get the current time as a time_t value
+    struct tm* timeinfo = localtime(&convert); // convert to local time
+    int hours = timeinfo->tm_hour; // extract hours
+    int minutes = timeinfo->tm_min; // extract minutes
+    int seconds = timeinfo->tm_sec; // extract seconds
+    string str1 = to_string(hours);
+    string str2 = to_string(minutes);
+    string str3 = to_string(seconds);
+    
+
+    string time = str1 + ':' + str2 + ':' + str3;
+    
+
+    return time; 
+}
+
 bool eightyCoin()   {
     //cout << "In EIGHTYCOIN" << endl;
-    srand(time(NULL)); 
+    srand(time(nullptr)); 
     int coin = (rand() % 10) + 1;
     if(coin <= 8)   {
         return true;
     }
     else    {
+        cout << "--------------------------false-----------" << endl;
         return false;
     }
 }
@@ -83,7 +102,7 @@ void Logcar(int ID,char Dir, time_t arrival_time, time_t start_time, time_t end_
 }
 
 void Logflagperson(time_t timestamp, string status){
-    //cout << "In LOGFLAGPERSON" << endl;
+    cout << "IN DFJKDLSA;FJDAS LOGFLAGPERSON" << endl;
     ofstream outdata;
 
     outdata.open("flagperson.log");
@@ -126,6 +145,7 @@ void* northCarGenerator(void* totaC) {
             sem_post(&mutex); 
         }
         else {
+            cout << "breaktime" << endl;
             pthread_sleep(20); // sleep if another car does not follow
         }
     }
@@ -147,6 +167,7 @@ void* southCarGenerator(void* totaC) {
             sem_post(&mutex); 
         }
         else {
+            cout << "breaktime" << endl;
             pthread_sleep(20); // sleep if another car does not follow
         }
     }
@@ -225,14 +246,14 @@ void* flagHandler(void* x) {
 
         
         sem_post(&mutex);
-
+        cout << "---------------CHECKPOINT---------------" << endl;
+        cout << "are they the same?" << tempSleepTime << " " << tempAwakeTime << endl; 
         if(tempSleepTime < tempAwakeTime)  {// logging flagperson behavior
             Logflagperson(tempSleepTime, "sleep");
             Logflagperson(tempAwakeTime, "woken-up");
         }
         //NOTE:CHECK IF WHAT IS CRITICAL SECTION IN THIS CODE   
         carCnt++;
-        //cout << "In FLAGHANDLER" << carCnt << endl;
     }
 }
 
