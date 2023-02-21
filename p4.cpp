@@ -7,13 +7,22 @@
 #include <string>
 #include <fstream>
 #include <semaphore.h>
+#include <queue>
+#include <iomanip>
 using namespace std;
+
+//prototype functions
+int pthread_sleep (int seconds);
+bool eightyCoin();
+void Logcar(int ID,char Dir, time_t arrival_time, time_t start_time, time_t end_time);
+void Logflagperson(time_t timestamp, string status);
+void* carCross(void*arg);
+void* northCarGenerator(void* totaC);
+void* southCarGenerator(void* totaC);
+void* flagHandler(void* x);
+int getNorthSize();
+int getSouthSize();
 //------------------------------------yonnas--------------------------
-queue<car> northTrafficQueue;
-queue<car> southTrafficQueue;
-int totalProduced = 0;
-sem_t mutex;
-sem_t empty;
 
 struct car { 
     int carID;
@@ -22,6 +31,12 @@ struct car {
     car(int carId, char dir, time_t arrTime) : carID(carId), directions(dir), arrivalTime(arrTime) {}
 
 };
+
+queue<car*> northTrafficQueue;
+queue<car*> southTrafficQueue;
+int totalProduced = 0;
+sem_t mutex;
+sem_t empty;
 
 int pthread_sleep (int seconds) {
     pthread_mutex_t mutex;
@@ -102,7 +117,7 @@ void* northCarGenerator(void* totaC) {
             sem_post(&empty);
             sem_wait(&mutex); // potentially change lock name or use difefrent type of lock
             car* newCar = new car(++totalProduced, 'N', time(nullptr));//create car object DYNAMICALLY
-            northCarQueue.push(newCar); //add car into queue
+            northTrafficQueue.push(newCar); //add car into queue
             sem_post(&mutex); 
         }
         else {
@@ -119,7 +134,7 @@ void* southCarGenerator(void* totaC) {
             sem_post(&empty);
             sem_wait(&mutex); // potentially change lock name or use difefrent type of lock
             car* newCar = new car(++totalProduced, 'S', time(nullptr));//create car object DYNAMICALLY
-            southCarQueue.push(newCar); //add car into queue
+            southTrafficQueue.push(newCar); //add car into queue
             sem_post(&mutex); 
         }
         else {
@@ -138,7 +153,7 @@ void* flagHandler(void* x) {
     char laneState = N;   //used to state which lane is currently being allowed to pass
     int n_size=0;
     int s_size=0;
-    car cartemp;
+    car* cartemp;
 
     //creates threads for cumulative total of cars
     pthread_t carThreads[totCars];
