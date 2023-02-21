@@ -43,12 +43,11 @@ void* carCross(void*arg) {
     
     car* my_car= static_cast<car*>(arg);
     
-    time_t s_time = time(0);//time car starts to cross construction lane
     
+    pthread_detach(pthread_self());
+    time_t s_time = time(0);//time car starts to cross construction lane
     pthread_sleep(1);//car is crossing construction lane
 
-    pthread_detach(pthread_self());
-    
     time_t e_time = time(0);//time car finishes crossing construction lane
     Logcar(my_car->carID, my_car->directions, my_car->arrivalTime, s_time, e_time);
 
