@@ -1,11 +1,4 @@
-#include<iostream>
-#include<time.h>
-#include<string>
-
-
-
-string converter(time_t convert){
-    time_t convert = time(nullptr); // get the current time as a time_t value
+string converter(time_t convert){ // get the current time as a time_t value
     struct tm* timeinfo = localtime(&convert); // convert to local time
     int hours = timeinfo->tm_hour; // extract hours
     int minutes = timeinfo->tm_min; // extract minutes
@@ -14,7 +7,6 @@ string converter(time_t convert){
     string str2 = to_string(minutes);
     string str3 = to_string(seconds);
     
-
     string time = str1 + ':' + str2 + ':' + str3;
     
 
