@@ -24,8 +24,6 @@ int getNorthSize();
 int getSouthSize();
 string converter(time_t convert);
 
-//------------------------------------yonnas--------------------------
-
 struct car { 
     int carID;
     char directions;
@@ -51,7 +49,6 @@ string converter(time_t convert){ // get the current time as a time_t value
     
     string time = str1 + ':' + str2 + ':' + str3;
     
-
     return time; 
 }
 
@@ -73,14 +70,13 @@ int pthread_sleep (int seconds) {
     return pthread_cond_timedwait(&conditionvar, &mutex, &timetoexpire);
 }
 
-bool eightyCoin()   {   //FIX THIS
+bool eightyCoin()   {   
     int coin = (rand() % 10) + 1;
     if(coin <= 8)   {
         
         return true;
     }
     else    {
-        cout << "--------------------------false-----------" << endl;
         return false;
     }
 }
@@ -114,7 +110,6 @@ void Logflagperson(string timestamp, string status){
     fflush(stdout);
     outdata.close();
 }
-
 void* carCross(void*arg) {   
     car* my_car = (car*)(arg);
     
@@ -132,7 +127,6 @@ void* carCross(void*arg) {
     delete my_car;  //deallocate car object after completing crossing
     return NULL;
 }
-//-----------------ryan code------------------------
 void* northCarGenerator(void* totaC) {
     
     int totalCars = *((int*)totaC);//cast input parameters
@@ -147,7 +141,7 @@ void* northCarGenerator(void* totaC) {
                 cout << "Failed to create a new car object." << endl;
             }
             sem_post(&mutex); 
-            cout << "total Produced: " << totalProduced << endl;
+            //cout << "total Produced: " << totalProduced << endl;
         }
         else {
             cout << "breaktime: " << converter(time(nullptr)) << endl;
@@ -183,7 +177,6 @@ void* southCarGenerator(void* totaC) {
     }
     pthread_exit(NULL);
 }
-//------------------------BENS SECTION OF HELPER CODE-------------------------
 void* flagHandler(void* x) {
 
     int carCnt = 0;
@@ -201,6 +194,7 @@ void* flagHandler(void* x) {
     clock_t tempAwakeTime=0;
 
     while(totCars != carCnt)    {
+                
         tempSleepTime = time(nullptr);
  
         sem_wait(&isEmpty);   //will sleep thread if there is no cars waiting in either queues
@@ -219,7 +213,7 @@ void* flagHandler(void* x) {
         }
 
         //if statement to check which lane should be allowed to pass first
-        if(s_size<0)   {
+        if(s_size>0)   {
             laneState = 'S';
         }
         else    {
@@ -231,10 +225,12 @@ void* flagHandler(void* x) {
             case 'N':
                 carTemp = northTrafficQueue.front();
                 northTrafficQueue.pop();
+                cout << "CarID: " << carTemp->carID << " Was just popped." << endl;
                 break;
             case 'S':
                 carTemp = southTrafficQueue.front();
                 southTrafficQueue.pop();
+                cout << "CarID: " << carTemp->carID << " Was just popped." << endl;
                 break;
             default:
                 return NULL;
@@ -261,14 +257,15 @@ void* flagHandler(void* x) {
 
 int getNorthSize()   {
     int nSize = southTrafficQueue.size();
+    cout << "North Queue Size: " << nSize << endl;
     return nSize;
 }
 
 int getSouthSize()   {
     int sSize = northTrafficQueue.size();
+    cout << "Sourth Queue Size: " << sSize << endl;
     return sSize;
 }
-//------------------------BENS SECTION OF HELPER CODE-------------------------
 int main(int argc, char* argv[]) {
     //obtaining total cars that will pass the lane in this code execution
     if (argc < 2) {
