@@ -23,6 +23,7 @@ void* flagHandler(void* x);
 int getNorthSize();
 int getSouthSize();
 string converter(time_t convert);
+
 //------------------------------------yonnas--------------------------
 
 struct car { 
@@ -55,6 +56,7 @@ string converter(time_t convert){ // get the current time as a time_t value
 }
 
 int pthread_sleep (int seconds) {
+
     pthread_mutex_t mutex;
     pthread_cond_t conditionvar;
     struct timespec timetoexpire;
@@ -84,7 +86,7 @@ bool eightyCoin()   {   //FIX THIS
 }
 
 void Logcar(int ID,char Dir, string arrival_time, string start_time, string end_time){
-    //cout << "In LOGCAR" << endl;
+
     ofstream outdata;
 
     outdata.open("car.log");
@@ -99,7 +101,7 @@ void Logcar(int ID,char Dir, string arrival_time, string start_time, string end_
 }
 
 void Logflagperson(string timestamp, string status){
-    cout << "IN DFJKDLSA;FJDAS LOGFLAGPERSON" << endl;
+
     ofstream outdata;
 
     outdata.open("flagperson.log");
@@ -120,8 +122,8 @@ void* carCross(void*arg) {
     pthread_detach(pthread_self());
     time_t s_time = time(0);//time car starts to cross construction lane
     pthread_sleep(1);//car is crossing construction lane
-
     time_t e_time = time(0);//time car finishes crossing construction lane
+    
     cout << "Stime: " << converter(s_time) << endl;
     cout << "Etime: " << converter(e_time) << endl;
     
@@ -132,11 +134,9 @@ void* carCross(void*arg) {
 
 //-----------------ryan code------------------------
 void* northCarGenerator(void* totaC) {
-    cout << "In NORTHCARGENERATOR" << endl;
     
     int totalCars = *((int*)totaC);//cast input parameters
     while (totalProduced <= totalCars) {    
-        cout << "creating car for north queue" << endl; 
         if (eightyCoin() == true) {            
             sem_post(&isEmpty);
             sem_wait(&mutex); // potentially change lock name or use difefrent type of lock
@@ -153,11 +153,9 @@ void* northCarGenerator(void* totaC) {
 }
 
 void* southCarGenerator(void* totaC) {
-    cout << "In SOUTHCARGENERATOR" << endl;
+    pthread_sleep(20);
     int totalCars = *((int*)totaC);//cast input parameters
     while (totalProduced <= totalCars) { 
-        //cout << "In creating car in south" << endl;   
-        cout << "creating car for south queue" << endl; 
     
         if (eightyCoin() == true) {            
             sem_post(&isEmpty);
@@ -167,8 +165,9 @@ void* southCarGenerator(void* totaC) {
             sem_post(&mutex); 
         }
         else {
-            cout << "breaktime" << endl;
+            cout << "breaktime: " << converter(time(nullptr)) << endl;
             pthread_sleep(20); // sleep if another car does not follow
+            cout << "end of breaktime: " << converter(time(nullptr)) << endl;
         }
     }
     pthread_exit(NULL);
@@ -177,10 +176,7 @@ void* southCarGenerator(void* totaC) {
 //------------------------BENS SECTION OF HELPER CODE-------------------------
 
 void* flagHandler(void* x) {
-    cout << "In FLAGHANDLER" << endl;
-    
 
-    
     int carCnt = 0;
     char laneState = 'N';   //used to state which lane is currently being allowed to pass
     int n_size=0;
@@ -196,9 +192,6 @@ void* flagHandler(void* x) {
     clock_t tempAwakeTime=0;
 
     while(totCars != carCnt)    {
-        cout << "where:" << carCnt << endl;
-        
-  
         tempSleepTime = time(nullptr);
  
         sem_wait(&isEmpty);   //will sleep thread if there is no cars waiting in either queues
@@ -244,9 +237,7 @@ void* flagHandler(void* x) {
             exit(-1);
         }
 
-        
         sem_post(&mutex);
-        cout << "---------------CHECKPOINT---------------" << endl;
         cout << "are they the same?" << converter(tempSleepTime) << " " << converter(tempAwakeTime) << endl; 
         if(tempSleepTime < tempAwakeTime)  {// logging flagperson behavior
             Logflagperson(converter(tempSleepTime), "sleep");
@@ -255,6 +246,7 @@ void* flagHandler(void* x) {
         //NOTE:CHECK IF WHAT IS CRITICAL SECTION IN THIS CODE   
         carCnt++;
     }
+    return NULL;
 }
 
 int getNorthSize()   {
@@ -270,9 +262,6 @@ int getSouthSize()   {
 
 //------------------------BENS SECTION OF HELPER CODE-------------------------
 int main(int argc, char* argv[]) {
-    cout << "In main" << endl;
-
-
     //obtaining total cars that will pass the lane in this code execution
     if (argc < 2) {
         return -1;
@@ -287,13 +276,13 @@ int main(int argc, char* argv[]) {
     //initializing mutex lock and isEmpty semaphores for mutual exclusion/synchronization
     sem_init(&mutex, 0, 1);
     sem_init(&isEmpty, 0, 0); //semaphore to check if no cars in either queue
-    cout << "about to make pthreads1" << endl;
+
     //setting up Consumer(flagperson) thread function with thread
     if(pthread_create(&consumerThread, NULL, &flagHandler, (void *) &cumCarsNum)) {
         perror("Pthread_create failed");
         exit(-1);
     }
-    cout << "about to make pthreads2" << endl;
+
     //setting up Producer(North car generator) thread function with thread
     if(pthread_create(&producerThreadN, NULL, &northCarGenerator, (void *) &cumCarsNum)) {
         perror("Pthread_create failed");
