@@ -8,9 +8,10 @@
 #include <fstream>
 #include <semaphore.h>
 using namespace std;
-
+//------------------------------------yonnas--------------------------
 queue<car> northTrafficQueue;
 queue<car> southTrafficQueue;
+int totalProduced = 0;
 sem_t mutex;
 sem_t empty;
 
@@ -18,6 +19,8 @@ struct car {
     int carID;
     char directions;
     time_t arrivalTime;
+    car(int carId, char dir, time_t arrTime) : carID(carId), directions(dir), arrivalTime(arrTime) {}
+
 };
 
 int pthread_sleep (int seconds) {
@@ -87,10 +90,44 @@ void* carCross(void*arg) {
 
     time_t e_time = time(0);//time car finishes crossing construction lane
     Logcar(my_car->carID, my_car->directions, my_car->arrivalTime, s_time, e_time);
-
+    delete my_car;  //deallocate car object after completing crossing
     return NULL;
 }
 
+//-----------------ryan code------------------------
+void* northCarGenerator(void* totaC) {
+    int totalCars = *((int*)totaC);//cast input parameters
+    while (totalProduced <= totalCars) {        
+        if (eightyCoin() == true) {            
+            sem_post(&empty);
+            sem_wait(&mutex); // potentially change lock name or use difefrent type of lock
+            car* newCar = new car(++totalProduced, 'N', time(nullptr));//create car object DYNAMICALLY
+            northCarQueue.push(newCar); //add car into queue
+            sem_post(&mutex); 
+        }
+        else {
+            pthread_sleep(20); // sleep if another car does not follow
+        }
+    }
+    pthread_exit(NULL);
+}
+
+void* southCarGenerator(void* totaC) {
+    int totalCars = *((int*)totaC);//cast input parameters
+    while (totalProduced <= totalCars) {        
+        if (eightyCoin() == true) {            
+            sem_post(&empty);
+            sem_wait(&mutex); // potentially change lock name or use difefrent type of lock
+            car* newCar = new car(++totalProduced, 'S', time(nullptr));//create car object DYNAMICALLY
+            southCarQueue.push(newCar); //add car into queue
+            sem_post(&mutex); 
+        }
+        else {
+            pthread_sleep(20); // sleep if another car does not follow
+        }
+    }
+    pthread_exit(NULL);
+}
 
 //------------------------BENS SECTION OF HELPER CODE-------------------------
 
@@ -103,6 +140,7 @@ void* flagHandler(void* x) {
     int s_size=0;
     car cartemp;
 
+    //creates threads for cumulative total of cars
     pthread_t carThreads[totCars];
 
     clock_t tempSleepTime=0;
@@ -147,7 +185,7 @@ void* flagHandler(void* x) {
         }
 
         //creates car thread for car object
-        if(pthread_create(&carThreads[carCnt], NULL, &carCross, (void *) carTemp)) {
+        if(pthread_create(&carThreads[carCnt], NULL, &carCross, (void *)carTemp)) {
             perror("Pthread_create failed");
             exit(-1);
         }
@@ -164,11 +202,11 @@ void* flagHandler(void* x) {
     }
 }
 
-
 int getNorthSize()   {
     int nSize = southTrafficQueue.size();
     return nSize;
 }
+
 int getSouthSize()   {
     int sSize = northTrafficQueue.size();
     return sSize;
@@ -177,24 +215,38 @@ int getSouthSize()   {
 
 //------------------------BENS SECTION OF HELPER CODE-------------------------
 int main(int argc, char* argv[]) {
+    
+    //obtaining total cars that will pass the lane in this code execution
     if (argc < 2) {
         return -1;
     }
     int cumCarsNum = stoi(argv[1]);
+
+    //create thread for 2 producers (North and South car generator), 1 consumer (flag person)
     pthread_t consumerThread;
+    pthread_t producerThreadN;
+    pthread_t producerThreadS;
+    
     //initializing mutex lock and empty semaphores for mutual exclusion/synchronization
     sem_init(&mutex, 0, 1);
-    sem_init(&empty, 0, 0);
+    sem_init(&empty, 0, 0); //semaphore to check if no cars in either queue
 
-
-
-    //create producer, and their thread function  (car generators for North and South queue is producer)
-
-    //create consumer, and their thread function  (flag person consumes cars in queue)
+    //setting up Consumer(flagperson) thread function with thread
     if(pthread_create(&consumerThread, NULL, &flagHandler, (void *) cumCarsNum)) {
         perror("Pthread_create failed");
         exit(-1);
     }
+    //setting up Producer(North car generator) thread function with thread
+    if(pthread_create(&producerThreadN, NULL, &northCarGenerator, (void *) cumCarsNum)) {
+        perror("Pthread_create failed");
+        exit(-1);
+    }
+    //setting up Producer(South car generator) thread function with thread
+    if(pthread_create(&producerThreadS, NULL, &southCarGenerator, (void *) cumCarsNum)) {
+        perror("Pthread_create failed");
+        exit(-1);
+    }
+
 
     //deleting semaphores
     sem_destroy(&mutex);
