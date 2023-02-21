@@ -9,6 +9,11 @@
 #include <semaphore.h>
 using namespace std;
 
+queue<car> northTrafficQueue;
+queue<car> southTrafficQueue;
+sem_t mutex;
+sem_t empty;
+
 struct car { 
     int carID;
     char directions;
@@ -43,86 +48,76 @@ bool eightyCoin()   {
     }
 }
 
-int logCar(int carID, char dir, clock_t arrival_time, clock_t start_time, clock_t end_time) {
-    ofstream logfile("car.log");
-    if (logfile.is_open()) {
-        logfile << carID << "," << dir << "," << arrival_time << "," << start_time << "," << end_time << "\n";
-        logfile.close(); // close the file
-    } else {
-        error -2;
+void Logcar(int ID,char Dir, time_t arrival_time, time_t start_time, time_t end_time){
+    ofstream outdata;
+
+    outdata.open("car.log");
+    if (!outdata)
+    {
+        perror("Couldn't open Car file");
+        exit(1);
     }
+    outdata << ID << setw(7) << Dir << setw(7) <<arrival_time << setw(7) <<start_time << setw(7) << end_time;
+    fflush(stdout);
+    outdata.close();
 }
 
-int logFlag(clock_t timeStamp, String State) {
-    ofstream logfile("flagperson.log");
-    if (logfile.is_open()) {
-        logfile << timeStamp << "," << State << "\n";
-        logfile.close(); // close the file
-    } else {
-        error -2;
+void Logflagperson(time_t timestamp, string status){
+    ofstream outdata;
+
+    outdata.open("flagperson.log");
+    if (!outdata)
+    {
+        perror("Couldn't open flagperson file");
+        exit(1);
     }
+    outdata << timestamp << setw(15) << status;
+    fflush(stdout);
+    outdata.close();
 }
 
-void* carCross(void* arrivalTime, void* carID, void* direc)  {    //function that thread will execute when crossing construction area
-    time_t a_time = *((time_t*)arrivalTime);
-    int cid = *((int*)carID);
-    int dir = *((int*)direc);
-
+void* carCross(void*arg) {   
+    
+    car* my_car= (car*)(arg);
+    
+    
+    pthread_detach(pthread_self());
     time_t s_time = time(0);//time car starts to cross construction lane
     pthread_sleep(1);//car is crossing construction lane
+
     time_t e_time = time(0);//time car finishes crossing construction lane
-    logCar(cid,dir,a_time, s_time, e_time);
+    Logcar(my_car->carID, my_car->directions, my_car->arrivalTime, s_time, e_time);
+
     return NULL;
-}
-
-
-void* carxProducerFunc(void* totCars, void* dir)    {
-    int totalCars = *((int*)totCars);
-    char direction = *((char*)dir);
-    for(int i = 0; i<totalCars; i++)    {
-        //create car objects
-    }
-    if(direction = "N")    {
-        //add to north queue
-    }
-    else if(direction = "S")    {
-        //add to south queue
-    }
-    else    {
-        return -1;
-    }
-    //set car objects arrival time parameter = time(0);
 }
 
 
 //------------------------BENS SECTION OF HELPER CODE-------------------------
 
-queue<car> northTrafficQueue;
-queue<car> southTrafficQueue;
-sem_t mutex;
-sem_t empty;
-
-
 void* flagHandler(void* x) {
     int totCars = *((int*) x); //see how many cars are allowed to pass cumulative 
+    int carCnt = 0;
+    
     char laneState = N;   //used to state which lane is currently being allowed to pass
     int n_size=0;
     int s_size=0;
-    car cartempn;
-    car cartemps;
+    car cartemp;
+
+    pthread_t carThreads[totCars];
+
     clock_t tempSleepTime=0;
     clock_t tempAwakeTime=0;
-    while(totCars != 0)    {
+    while(totCars != carCnt)    {
+        
+        
         tempSleepTime = time(nullptr);
         sem_wait(&empty);   //will sleep thread if there is no cars waiting in either queues
         tempAwakeTime = time(nullptr);
         sem_wait(&mutex);
 
-        cartempn=northTrafficQueue.front()->arrivalTime;
-        cartemps=southTrafficQueue.front()->arrivalTime;
+        //update sizes for both queues
         s_size = getSouthSize();
         n_size = getNorthSize();
-
 
         if(s_size>=10) {    //checks if any backups needed flow
             laneState = 'S';
@@ -132,38 +127,43 @@ void* flagHandler(void* x) {
         }
 
         //if statement to check which lane should be allowed to pass first
-        if(s_size==0)   {
-            laneState = 'N';
-        }
-        else    {
+        if(s_size<0)   {
             laneState = 'S';
         }
+        else    {
+            laneState = 'N';
+        }
+
+        //pops car from decided car queue
         switch (laneState)  {
             case 'N':
-                //take a car from N queue
+                carTemp = northTrafficQueue.pop();
                 break;
             case 'S':
-                //take a car from S queue
+                carTemp = southTrafficQueue.pop();
                 break;
             default:
                 return -1;
         }
 
+        //creates car thread for car object
+        if(pthread_create(&carThreads[carCnt], NULL, &carCross, (void *) carTemp)) {
+            perror("Pthread_create failed");
+            exit(-1);
+        }
+
         
         sem_wait(&mutex);
-
 
         if(tempSleepTime < tempAwakeTime)  {// logging flagperson behavior
             logFlag(tempSleepTime, "sleep");
             logFlag(tempAwakeTime, "woken-up");
         }
-
-        //NOTE:CHECK IF WHAT IS CRITICAL SECTION IN THIS CODE
-        
+        //NOTE:CHECK IF WHAT IS CRITICAL SECTION IN THIS CODE   
+        carCnt++;
     }
-    
-
 }
+
 
 int getNorthSize()   {
     int nSize = southTrafficQueue.size();
@@ -199,6 +199,18 @@ int main(int argc, char* argv[]) {
     //deleting semaphores
     sem_destroy(&mutex);
     sem_destroy(&empty);
+
+
+
+
+
+
+
+
+
+
+
+
 
     //NOTE: THERE IS RACE CONDITION ON SHARED RESOURCE OF THE NORTH AND SOUTH QUEUES
     //use mutex lock for modification of queues
