@@ -36,7 +36,7 @@ queue<car*> northTrafficQueue;
 queue<car*> southTrafficQueue;
 int totalProduced = 0;
 sem_t mutex;
-sem_t empty;
+sem_t isEmpty;
 
 int pthread_sleep (int seconds) {
     pthread_mutex_t mutex;
@@ -96,7 +96,7 @@ void Logflagperson(time_t timestamp, string status){
 
 void* carCross(void*arg) {   
     
-    car* my_car= (car*)(arg);
+    car* my_car = (car*)(arg);
     
     
     pthread_detach(pthread_self());
@@ -114,7 +114,7 @@ void* northCarGenerator(void* totaC) {
     int totalCars = *((int*)totaC);//cast input parameters
     while (totalProduced <= totalCars) {        
         if (eightyCoin() == true) {            
-            sem_post(&empty);
+            sem_post(&isEmpty);
             sem_wait(&mutex); // potentially change lock name or use difefrent type of lock
             car* newCar = new car(++totalProduced, 'N', time(nullptr));//create car object DYNAMICALLY
             northTrafficQueue.push(newCar); //add car into queue
@@ -131,7 +131,7 @@ void* southCarGenerator(void* totaC) {
     int totalCars = *((int*)totaC);//cast input parameters
     while (totalProduced <= totalCars) {        
         if (eightyCoin() == true) {            
-            sem_post(&empty);
+            sem_post(&isEmpty);
             sem_wait(&mutex); // potentially change lock name or use difefrent type of lock
             car* newCar = new car(++totalProduced, 'S', time(nullptr));//create car object DYNAMICALLY
             southTrafficQueue.push(newCar); //add car into queue
@@ -150,10 +150,10 @@ void* flagHandler(void* x) {
     int totCars = *((int*) x); //see how many cars are allowed to pass cumulative 
     int carCnt = 0;
     
-    char laneState = N;   //used to state which lane is currently being allowed to pass
+    char laneState = 'N';   //used to state which lane is currently being allowed to pass
     int n_size=0;
     int s_size=0;
-    car* cartemp;
+    car* carTemp;
 
     //creates threads for cumulative total of cars
     pthread_t carThreads[totCars];
@@ -164,7 +164,7 @@ void* flagHandler(void* x) {
         
         
         tempSleepTime = time(nullptr);
-        sem_wait(&empty);   //will sleep thread if there is no cars waiting in either queues
+        sem_wait(&isEmpty);   //will sleep thread if there is no cars waiting in either queues
         tempAwakeTime = time(nullptr);
         sem_wait(&mutex);
 
@@ -190,13 +190,15 @@ void* flagHandler(void* x) {
         //pops car from decided car queue
         switch (laneState)  {
             case 'N':
-                carTemp = northTrafficQueue.pop();
+                carTemp = northTrafficQueue.front();
+                northTrafficQueue.pop();
                 break;
             case 'S':
-                carTemp = southTrafficQueue.pop();
+                carTemp = southTrafficQueue.front();
+                southTrafficQueue.pop();
                 break;
             default:
-                return -1;
+                return NULL;
         }
 
         //creates car thread for car object
@@ -209,8 +211,8 @@ void* flagHandler(void* x) {
         sem_wait(&mutex);
 
         if(tempSleepTime < tempAwakeTime)  {// logging flagperson behavior
-            logFlag(tempSleepTime, "sleep");
-            logFlag(tempAwakeTime, "woken-up");
+            Logflagperson(tempSleepTime, "sleep");
+            Logflagperson(tempAwakeTime, "woken-up");
         }
         //NOTE:CHECK IF WHAT IS CRITICAL SECTION IN THIS CODE   
         carCnt++;
@@ -242,9 +244,9 @@ int main(int argc, char* argv[]) {
     pthread_t producerThreadN;
     pthread_t producerThreadS;
     
-    //initializing mutex lock and empty semaphores for mutual exclusion/synchronization
+    //initializing mutex lock and isEmpty semaphores for mutual exclusion/synchronization
     sem_init(&mutex, 0, 1);
-    sem_init(&empty, 0, 0); //semaphore to check if no cars in either queue
+    sem_init(&isEmpty, 0, 0); //semaphore to check if no cars in either queue
 
     //setting up Consumer(flagperson) thread function with thread
     if(pthread_create(&consumerThread, NULL, &flagHandler, (void *) cumCarsNum)) {
@@ -265,7 +267,7 @@ int main(int argc, char* argv[]) {
 
     //deleting semaphores
     sem_destroy(&mutex);
-    sem_destroy(&empty);
+    sem_destroy(&isEmpty);
 
 
 
