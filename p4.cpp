@@ -123,7 +123,7 @@ void* carCross(void*arg) {
     //cout << "Etime: " << converter(e_time) << endl;
     
     Logcar(my_car->carID, my_car->directions, converter(my_car->arrivalTime), converter(s_time), converter(e_time));
-    cout << "yall didnt think we finna make it, juiceWLRD did" << endl;
+    cout << "deleting carID: " << my_car->carID << endl;
     delete my_car;  //deallocate car object after completing crossing
     return NULL;
 }
@@ -131,11 +131,13 @@ void* northCarGenerator(void* totaC) {
     
     int totalCars = *((int*)totaC);//cast input parameters
     while (totalProduced < totalCars) {    
-        if (eightyCoin() == true) {            
+        if (eightyCoin() == true) { 
+
             sem_post(&isEmpty);
             sem_wait(&mutex); // potentially change lock name or use difefrent type of lock
             car* newCar = new car(++totalProduced, 'N', time(nullptr));//create car object DYNAMICALLY
             if(newCar != nullptr) {
+                cout << "pushing carID: " << newCar->carID << " into north queue" << endl;
                 northTrafficQueue.push(newCar); //add car into queue
             } else {
                 cout << "Failed to create a new car object." << endl;
@@ -162,6 +164,7 @@ void* southCarGenerator(void* totaC) {
             sem_wait(&mutex); // potentially change lock name or use difefrent type of lock
             car* newCar = new car(++totalProduced, 'S', time(nullptr));//create car object DYNAMICALLY
             if(newCar != nullptr) {
+                cout << "pushing carID: " << newCar->carID << " into south queue" << endl;
                 southTrafficQueue.push(newCar); //add car into queue
             } else {
                 cout << "Failed to create a new car object." << endl;
@@ -256,14 +259,14 @@ void* flagHandler(void* x) {
 }
 
 int getNorthSize()   {
-    int nSize = southTrafficQueue.size();
+    int nSize = northTrafficQueue.size();
     cout << "North Queue Size: " << nSize << endl;
     return nSize;
 }
 
 int getSouthSize()   {
-    int sSize = northTrafficQueue.size();
-    cout << "Sourth Queue Size: " << sSize << endl;
+    int sSize = southTrafficQueue.size();
+    cout << "South Queue Size: " << sSize << endl;
     return sSize;
 }
 int main(int argc, char* argv[]) {
