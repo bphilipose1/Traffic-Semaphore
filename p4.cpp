@@ -14,8 +14,8 @@ using namespace std;
 //prototype functions
 int pthread_sleep (int seconds);
 bool eightyCoin();
-void Logcar(int ID,char Dir, time_t arrival_time, time_t start_time, time_t end_time);
-void Logflagperson(time_t timestamp, string status);
+void Logcar(int ID,char Dir, string arrival_time, string start_time, string end_time);
+void Logflagperson(string timestamp, string status);
 void* carCross(void*arg);
 void* northCarGenerator(void* totaC);
 void* southCarGenerator(void* totaC);
@@ -39,6 +39,21 @@ int totalProduced = 0;
 sem_t mutex;
 sem_t isEmpty;
 
+string converter(time_t convert){ // get the current time as a time_t value
+    struct tm* timeinfo = localtime(&convert); // convert to local time
+    int hours = timeinfo->tm_hour; // extract hours
+    int minutes = timeinfo->tm_min; // extract minutes
+    int seconds = timeinfo->tm_sec; // extract seconds
+    string str1 = to_string(hours);
+    string str2 = to_string(minutes);
+    string str3 = to_string(seconds);
+    
+    string time = str1 + ':' + str2 + ':' + str3;
+    
+
+    return time; 
+}
+
 int pthread_sleep (int seconds) {
     pthread_mutex_t mutex;
     pthread_cond_t conditionvar;
@@ -56,28 +71,10 @@ int pthread_sleep (int seconds) {
     return pthread_cond_timedwait(&conditionvar, &mutex, &timetoexpire);
 }
 
-string converter(time_t convert)    {
-    time_t convert = time(nullptr); // get the current time as a time_t value
-    struct tm* timeinfo = localtime(&convert); // convert to local time
-    int hours = timeinfo->tm_hour; // extract hours
-    int minutes = timeinfo->tm_min; // extract minutes
-    int seconds = timeinfo->tm_sec; // extract seconds
-    string str1 = to_string(hours);
-    string str2 = to_string(minutes);
-    string str3 = to_string(seconds);
-    
-
-    string time = str1 + ':' + str2 + ':' + str3;
-    
-
-    return time; 
-}
-
-bool eightyCoin()   {
-    //cout << "In EIGHTYCOIN" << endl;
-    srand(time(nullptr)); 
+bool eightyCoin()   {   //FIX THIS
     int coin = (rand() % 10) + 1;
     if(coin <= 8)   {
+        
         return true;
     }
     else    {
@@ -86,7 +83,7 @@ bool eightyCoin()   {
     }
 }
 
-void Logcar(int ID,char Dir, time_t arrival_time, time_t start_time, time_t end_time){
+void Logcar(int ID,char Dir, string arrival_time, string start_time, string end_time){
     //cout << "In LOGCAR" << endl;
     ofstream outdata;
 
@@ -101,7 +98,7 @@ void Logcar(int ID,char Dir, time_t arrival_time, time_t start_time, time_t end_
     outdata.close();
 }
 
-void Logflagperson(time_t timestamp, string status){
+void Logflagperson(string timestamp, string status){
     cout << "IN DFJKDLSA;FJDAS LOGFLAGPERSON" << endl;
     ofstream outdata;
 
@@ -125,7 +122,10 @@ void* carCross(void*arg) {
     pthread_sleep(1);//car is crossing construction lane
 
     time_t e_time = time(0);//time car finishes crossing construction lane
-    Logcar(my_car->carID, my_car->directions, my_car->arrivalTime, s_time, e_time);
+    cout << "Stime: " << converter(s_time) << endl;
+    cout << "Etime: " << converter(e_time) << endl;
+    
+    Logcar(my_car->carID, my_car->directions, converter(my_car->arrivalTime), converter(s_time), converter(e_time));
     delete my_car;  //deallocate car object after completing crossing
     return NULL;
 }
@@ -247,10 +247,10 @@ void* flagHandler(void* x) {
         
         sem_post(&mutex);
         cout << "---------------CHECKPOINT---------------" << endl;
-        cout << "are they the same?" << tempSleepTime << " " << tempAwakeTime << endl; 
+        cout << "are they the same?" << converter(tempSleepTime) << " " << converter(tempAwakeTime) << endl; 
         if(tempSleepTime < tempAwakeTime)  {// logging flagperson behavior
-            Logflagperson(tempSleepTime, "sleep");
-            Logflagperson(tempAwakeTime, "woken-up");
+            Logflagperson(converter(tempSleepTime), "sleep");
+            Logflagperson(converter(tempAwakeTime), "woken-up");
         }
         //NOTE:CHECK IF WHAT IS CRITICAL SECTION IN THIS CODE   
         carCnt++;
@@ -271,6 +271,8 @@ int getSouthSize()   {
 //------------------------BENS SECTION OF HELPER CODE-------------------------
 int main(int argc, char* argv[]) {
     cout << "In main" << endl;
+
+
     //obtaining total cars that will pass the lane in this code execution
     if (argc < 2) {
         return -1;
