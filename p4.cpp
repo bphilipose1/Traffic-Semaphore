@@ -98,7 +98,6 @@ void Logflagperson(time_t timestamp, string status){
 }
 
 void* carCross(void*arg) {   
-    //cout << "In CARCROSS" << endl;
     car* my_car = (car*)(arg);
     
     
@@ -114,11 +113,11 @@ void* carCross(void*arg) {
 
 //-----------------ryan code------------------------
 void* northCarGenerator(void* totaC) {
-    //cout << "In NORTHCARGENERATOR" << endl;
+    cout << "In NORTHCARGENERATOR" << endl;
     
     int totalCars = *((int*)totaC);//cast input parameters
     while (totalProduced <= totalCars) {    
-        //cout << "creating car for north queue" << endl; 
+        cout << "creating car for north queue" << endl; 
         if (eightyCoin() == true) {            
             sem_post(&isEmpty);
             sem_wait(&mutex); // potentially change lock name or use difefrent type of lock
@@ -134,10 +133,12 @@ void* northCarGenerator(void* totaC) {
 }
 
 void* southCarGenerator(void* totaC) {
-    //cout << "In SOUTHCARGENERATOR" << endl;
+    cout << "In SOUTHCARGENERATOR" << endl;
     int totalCars = *((int*)totaC);//cast input parameters
     while (totalProduced <= totalCars) { 
-        //cout << "In creating car in south" << endl;       
+        //cout << "In creating car in south" << endl;   
+        cout << "creating car for south queue" << endl; 
+    
         if (eightyCoin() == true) {            
             sem_post(&isEmpty);
             sem_wait(&mutex); // potentially change lock name or use difefrent type of lock
@@ -155,34 +156,38 @@ void* southCarGenerator(void* totaC) {
 //------------------------BENS SECTION OF HELPER CODE-------------------------
 
 void* flagHandler(void* x) {
-    //cout << "In FLAGHANDLER" << endl;
-    int totCars = *((int*) x); //see how many cars are allowed to pass cumulative 
-    int carCnt = 0;
+    cout << "In FLAGHANDLER" << endl;
     
+
+    
+    int carCnt = 0;
     char laneState = 'N';   //used to state which lane is currently being allowed to pass
     int n_size=0;
     int s_size=0;
     car* carTemp;
-
+    
+    
+    int totCars = *((int*) x); //see how many cars are allowed to pass cumulative
     //creates threads for cumulative total of cars
     vector<pthread_t> carThreads(totCars);
 
     clock_t tempSleepTime=0;
     clock_t tempAwakeTime=0;
-    while(totCars != carCnt)    {
-        
-        
-        cout<<"we in while loop" << endl;
 
+    while(totCars != carCnt)    {
+        cout << "where:" << carCnt << endl;
+        
+  
         tempSleepTime = time(nullptr);
+ 
         sem_wait(&isEmpty);   //will sleep thread if there is no cars waiting in either queues
         tempAwakeTime = time(nullptr);
         sem_wait(&mutex);
-
+        
         //update sizes for both queues
         s_size = getSouthSize();
         n_size = getNorthSize();
-
+        
         if(s_size>=10) {    //checks if any backups needed flow
             laneState = 'S';
         }
@@ -197,7 +202,7 @@ void* flagHandler(void* x) {
         else    {
             laneState = 'N';
         }
-
+        
         //pops car from decided car queue
         switch (laneState)  {
             case 'N':
@@ -219,7 +224,7 @@ void* flagHandler(void* x) {
         }
 
         
-        sem_wait(&mutex);
+        sem_post(&mutex);
 
         if(tempSleepTime < tempAwakeTime)  {// logging flagperson behavior
             Logflagperson(tempSleepTime, "sleep");
@@ -261,44 +266,42 @@ int main(int argc, char* argv[]) {
     sem_init(&isEmpty, 0, 0); //semaphore to check if no cars in either queue
     cout << "about to make pthreads1" << endl;
     //setting up Consumer(flagperson) thread function with thread
-    if(pthread_create(&consumerThread, NULL, &flagHandler, (void *) cumCarsNum)) {
+    if(pthread_create(&consumerThread, NULL, &flagHandler, (void *) &cumCarsNum)) {
         perror("Pthread_create failed");
         exit(-1);
-    }
-    if(pthread_join(consumerThread, NULL)) {
-        perror("Pthread_join failed");
-        exit(-2);
     }
     cout << "about to make pthreads2" << endl;
     //setting up Producer(North car generator) thread function with thread
-    
-    /*
-    if(pthread_create(&producerThreadN, NULL, &northCarGenerator, (void *) cumCarsNum)) {
+    if(pthread_create(&producerThreadN, NULL, &northCarGenerator, (void *) &cumCarsNum)) {
         perror("Pthread_create failed");
         exit(-1);
+    }
+    //setting up Producer(South car generator) thread function with thread
+    if(pthread_create(&producerThreadS, NULL, &southCarGenerator, (void *) &cumCarsNum)) {
+        perror("Pthread_create failed");
+        exit(-1);
+    }
+    cout << "In Threads created" << endl;
+
+    if(pthread_join(consumerThread, NULL)) {
+        perror("Pthread_join failed");
+        exit(-2);
     }
     if(pthread_join(producerThreadN, NULL)) {
         perror("Pthread_join failed");
         exit(-2);
     }
-    cout << "about to make pthreads3" << endl;
-    */
-    //setting up Producer(South car generator) thread function with thread
-    /*
-    if(pthread_create(&producerThreadS, NULL, &southCarGenerator, (void *) cumCarsNum)) {
-        perror("Pthread_create failed");
-        exit(-1);
-    }
     if(pthread_join(producerThreadS, NULL)) {
         perror("Pthread_join failed");
         exit(-2);
     }
-    */
+    
+    
     cout << "finished making pthreads" << endl;
 
 
 
-    cout << "In Threads created" << endl;
+
 
 
     //deleting semaphores
