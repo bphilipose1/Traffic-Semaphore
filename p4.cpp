@@ -37,6 +37,7 @@ queue<car*> southTrafficQueue;
 int totalProduced = 0;
 sem_t mutex;
 sem_t isEmpty;
+int isEmptycount;
 
 string converter(time_t convert){ // get the current time as a time_t value
     struct tm* timeinfo = localtime(&convert); // convert to local time
@@ -134,6 +135,7 @@ void* northCarGenerator(void* totaC) {
         if (eightyCoin() == true) { 
 
             sem_post(&isEmpty);
+            isEmptycount++;
             sem_wait(&mutex); // potentially change lock name or use difefrent type of lock
             car* newCar = new car(++totalProduced, 'N', time(nullptr));//create car object DYNAMICALLY
             if(newCar != nullptr) {
@@ -161,6 +163,7 @@ void* southCarGenerator(void* totaC) {
     
         if (eightyCoin() == true) {            
             sem_post(&isEmpty);
+            isEmptycount++;
             sem_wait(&mutex); // potentially change lock name or use difefrent type of lock
             car* newCar = new car(++totalProduced, 'S', time(nullptr));//create car object DYNAMICALLY
             if(newCar != nullptr) {
@@ -199,8 +202,9 @@ void* flagHandler(void* x) {
     while(totCars != carCnt)    {
                 
         tempSleepTime = time(nullptr);
- 
+        cout << "isEmpty: " << isEmptycount << endl;
         sem_wait(&isEmpty);   //will sleep thread if there is no cars waiting in either queues
+        isEmptycount--;
         tempAwakeTime = time(nullptr);
         sem_wait(&mutex);
         
@@ -228,12 +232,12 @@ void* flagHandler(void* x) {
             case 'N':
                 carTemp = northTrafficQueue.front();
                 northTrafficQueue.pop();
-                cout << "CarID: " << carTemp->carID << " Was just popped." << endl;
+                cout << "CarID: " << carTemp->carID << " Was just popped from north queue." << endl;
                 break;
             case 'S':
                 carTemp = southTrafficQueue.front();
                 southTrafficQueue.pop();
-                cout << "CarID: " << carTemp->carID << " Was just popped." << endl;
+                cout << "CarID: " << carTemp->carID << " Was just popped from south queue." << endl;
                 break;
             default:
                 return NULL;
