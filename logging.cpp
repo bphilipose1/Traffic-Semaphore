@@ -41,7 +41,7 @@ void Logflagperson(time_t timestamp, string status){
 
 void* carCross(void*arg) {   
     
-    car* my_car= static_cast<car*>(arg);
+    car* my_car= (car*)(arg);
     
     
     pthread_detach(pthread_self());
