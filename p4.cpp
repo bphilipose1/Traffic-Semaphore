@@ -77,41 +77,57 @@ int logFlag(clock_t timeStamp, String State) {
     }
 }
 
-void *produceCar(void *totCars, void* dir, void* arr)
-{
-	struct car newCar;
-    char direction = *((char*) dir);
-    int totalCars = *((int*)totCars)
-    total_t arrivalTime = *((total_t*)arr)
-	
-    while(cars <= totCars){
-		if(eightyCoin == true){
-			sem_wait(&);
-			pthread_mutex_lock(&car_mutex);
-			if(direction == 'N') {
-				++northCount;
-                northTrafficQueue.push(newCar);
-                //arrivalTime.push();
-                pthread_mutex_unlock(&mutex);
-            }
-			else if (direction == 'S') {
-				++southCount;
-                southTrafficQueue.push(newCar);
-                //arrivalTime.push();
-                pthread_mutex_unlock(&mutex);
 
-            }
-			pthread_mutex_unlock(&mutex);
-			sem_post(&empty);
-		}
+void* northCarGenerator(void* arg, void* totalProduced) {
+    struct car newCar;
+    newCar.carID;
+    newCar.dir = 'N';
+    newCar.arrival;
+    int totalProduced = 0;
+    //pthread_mutex_lock(&mutexN);
+    while (totalProduced <= totalCars) {        
+        if (eightyCoin() == true) {
+            //pthread_mutex_unlock(&mutexN);
+            sem_wait(&mutex); // potentially change lock name or use difefrent type of lock
+            newCar.carID = totalProduced;
+            newCar.arrivalTime = time(nullptr);
+            northCarQueue.push(totalProduced);
+            ++totalProduced;
+            sem_post(&mutex);
+            
+        }
         else {
-			//pthread_sleep(20);
-            return -1;
-		}
-	}
+            pthread_sleep(20); // sleep if another car does not follow
+        }
+    }
+    pthread_exit(NULL);
 }
 
 
+void* southCarGenerator(void* arg, void* totalProduced) {
+    struct car newCar;
+    newCar.carID;
+    newCar.dir = 'S';
+    newCar.arrival;
+    int totalProduced = 0;
+    //pthread_mutex_lock(&mutexS);
+    while (totalProduced <= totalCars) {        
+        if (eightyCoin() == true) {
+            //pthread_mutex_unlock(&mutexS);
+            sem_wait(&mutex); // potentially change lock name or use difefrent type of lock
+            newCar.carID = totalProduced;
+            newCar.arrivalTime = time(nullptr);
+            northCarQueue.push(totalProduced);
+            ++totalProduced;
+            sem_post(&mutex);
+            
+        }
+        else {
+            pthread_sleep(20); // sleep if another car does not follow
+        }
+    }
+    pthread_exit(NULL);
+}
 
 
 /*
