@@ -39,12 +39,9 @@ void Logflagperson(time_t timestamp, string status){
     outdata.close();
 }
 
-void* carCross(void* arrivalTime, void* carID, void* direc)  {   
-    time_t a_time = *((time_t*)arrivalTime);
-    int cid = *((int*)carID);
-    int dir = *((int*)direc);
-
-    car*instance = static_cast<car*>(arg);
+void* carCross(void*arg) {   
+    
+    car* my_car= static_cast<car*>(arg);
     
     time_t s_time = time(0);//time car starts to cross construction lane
     
@@ -53,7 +50,7 @@ void* carCross(void* arrivalTime, void* carID, void* direc)  {
     pthread_detach(pthread_self());
     
     time_t e_time = time(0);//time car finishes crossing construction lane
-    Logcar(cid,dir,a_time, s_time, e_time);
+    Logcar(my_car->carID, my_car->directions, my_car->arrivalTime, s_time, e_time);
 
     return NULL;
 }
