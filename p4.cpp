@@ -124,45 +124,30 @@ void* carCross(void*arg) {
     pthread_sleep(1);//car is crossing construction lane
     time_t e_time = time(0);//time car finishes crossing construction lane
     
-    cout << "Stime: " << converter(s_time) << endl;
-    cout << "Etime: " << converter(e_time) << endl;
+    //cout << "Stime: " << converter(s_time) << endl;
+    //cout << "Etime: " << converter(e_time) << endl;
     
     Logcar(my_car->carID, my_car->directions, converter(my_car->arrivalTime), converter(s_time), converter(e_time));
+    cout << "yall didnt think we finna make it, juiceWLRD did" << endl;
     delete my_car;  //deallocate car object after completing crossing
     return NULL;
 }
-
 //-----------------ryan code------------------------
 void* northCarGenerator(void* totaC) {
     
     int totalCars = *((int*)totaC);//cast input parameters
-    while (totalProduced <= totalCars) {    
+    while (totalProduced < totalCars) {    
         if (eightyCoin() == true) {            
             sem_post(&isEmpty);
             sem_wait(&mutex); // potentially change lock name or use difefrent type of lock
             car* newCar = new car(++totalProduced, 'N', time(nullptr));//create car object DYNAMICALLY
-            northTrafficQueue.push(newCar); //add car into queue
+            if(newCar != nullptr) {
+                northTrafficQueue.push(newCar); //add car into queue
+            } else {
+                cout << "Failed to create a new car object." << endl;
+            }
             sem_post(&mutex); 
-        }
-        else {
-            cout << "breaktime" << endl;
-            pthread_sleep(20); // sleep if another car does not follow
-        }
-    }
-    pthread_exit(NULL);
-}
-
-void* southCarGenerator(void* totaC) {
-    pthread_sleep(20);
-    int totalCars = *((int*)totaC);//cast input parameters
-    while (totalProduced <= totalCars) { 
-    
-        if (eightyCoin() == true) {            
-            sem_post(&isEmpty);
-            sem_wait(&mutex); // potentially change lock name or use difefrent type of lock
-            car* newCar = new car(++totalProduced, 'S', time(nullptr));//create car object DYNAMICALLY
-            southTrafficQueue.push(newCar); //add car into queue
-            sem_post(&mutex); 
+            cout << "total Produced: " << totalProduced << endl;
         }
         else {
             cout << "breaktime: " << converter(time(nullptr)) << endl;
@@ -173,8 +158,32 @@ void* southCarGenerator(void* totaC) {
     pthread_exit(NULL);
 }
 
-//------------------------BENS SECTION OF HELPER CODE-------------------------
+void* southCarGenerator(void* totaC) {
 
+    int totalCars = *((int*)totaC);//cast input parameters
+    while (totalProduced < totalCars) { 
+    
+        if (eightyCoin() == true) {            
+            sem_post(&isEmpty);
+            sem_wait(&mutex); // potentially change lock name or use difefrent type of lock
+            car* newCar = new car(++totalProduced, 'S', time(nullptr));//create car object DYNAMICALLY
+            if(newCar != nullptr) {
+                southTrafficQueue.push(newCar); //add car into queue
+            } else {
+                cout << "Failed to create a new car object." << endl;
+            }
+            sem_post(&mutex); 
+            cout << "total Produced: " << totalProduced << endl;
+        }
+        else {
+            cout << "breaktime: " << converter(time(nullptr)) << endl;
+            pthread_sleep(20); // sleep if another car does not follow
+            cout << "end of breaktime: " << converter(time(nullptr)) << endl;
+        }
+    }
+    pthread_exit(NULL);
+}
+//------------------------BENS SECTION OF HELPER CODE-------------------------
 void* flagHandler(void* x) {
 
     int carCnt = 0;
@@ -238,8 +247,9 @@ void* flagHandler(void* x) {
         }
 
         sem_post(&mutex);
-        cout << "are they the same?" << converter(tempSleepTime) << " " << converter(tempAwakeTime) << endl; 
+        
         if(tempSleepTime < tempAwakeTime)  {// logging flagperson behavior
+            cout << "Sleep Time: " << converter(tempSleepTime) << " Wake Time: " << converter(tempAwakeTime) << endl; 
             Logflagperson(converter(tempSleepTime), "sleep");
             Logflagperson(converter(tempAwakeTime), "woken-up");
         }
@@ -258,8 +268,6 @@ int getSouthSize()   {
     int sSize = northTrafficQueue.size();
     return sSize;
 }
-
-
 //------------------------BENS SECTION OF HELPER CODE-------------------------
 int main(int argc, char* argv[]) {
     //obtaining total cars that will pass the lane in this code execution
