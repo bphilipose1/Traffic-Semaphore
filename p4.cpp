@@ -7,16 +7,54 @@
 #include <string>
 #include <fstream>
 #include <semaphore.h>
-
+#include <queue>
+#include <iomanip>
 using namespace std;
 
+//prototype functions
+int pthread_sleep (int seconds);
+bool eightyCoin();
+void Logcar(int ID,char Dir, string arrival_time, string start_time, string end_time);
+void Logflagperson(string timestamp, string status);
+void* carCross(void*arg);
+void* northCarGenerator(void* totaC);
+void* southCarGenerator(void* totaC);
+void* flagHandler(void* x);
+int getNorthSize();
+int getSouthSize();
+string converter(time_t convert);
+
 struct car { 
-    int carID;
+    
     char directions;
     time_t arrivalTime;
+    car(char dir, time_t arrTime) : directions(dir), arrivalTime(arrTime) {}
+
 };
 
+queue<car*> northTrafficQueue;
+queue<car*> southTrafficQueue;
+int id = 0;
+sem_t mutex;
+sem_t isEmpty;
+int isEmptycount;
+
+string converter(time_t convert){ // get the current time as a time_t value
+    struct tm* timeinfo = localtime(&convert); // convert to local time
+    int hours = timeinfo->tm_hour; // extract hours
+    int minutes = timeinfo->tm_min; // extract minutes
+    int seconds = timeinfo->tm_sec; // extract seconds
+    string str1 = to_string(hours);
+    string str2 = to_string(minutes);
+    string str3 = to_string(seconds);
+    
+    string time = str1 + ':' + str2 + ':' + str3;
+    
+    return time; 
+}
+
 int pthread_sleep (int seconds) {
+
     pthread_mutex_t mutex;
     pthread_cond_t conditionvar;
     struct timespec timetoexpire;
@@ -33,10 +71,10 @@ int pthread_sleep (int seconds) {
     return pthread_cond_timedwait(&conditionvar, &mutex, &timetoexpire);
 }
 
-bool eightyCoin()   {
-    srand(time(NULL)); 
+bool eightyCoin()   {   
     int coin = (rand() % 10) + 1;
     if(coin <= 8)   {
+        
         return true;
     }
     else    {
@@ -44,68 +82,141 @@ bool eightyCoin()   {
     }
 }
 
-int logCar(int carID, char dir, clock_t arrival_time, clock_t start_time, clock_t end_time) {
-    ofstream logfile("car.log");
-    if (logfile.is_open()) {
-        logfile << carID << "," << dir << "," << arrival_time << "," << start_time << "," << end_time << "\n";
-        logfile.close(); // close the file
-    } else {
-        error -2;
+void Logcar(int ID,char Dir, string arrival_time, string start_time, string end_time){
+
+    ofstream outdata("car.log",ios::app);
+
+    outdata.is_open();
+    if (!outdata)
+    {
+        perror("Couldn't open Car file");
+        exit(1);
     }
+    outdata << ID << setw(7) << Dir << setw(10) <<arrival_time << setw(10) <<start_time << setw(10) << end_time << '\n';
+    outdata.close();
 }
 
-int logFlag(clock_t timeStamp, String State) {
-    ofstream logfile("flagperson.log");
-    if (logfile.is_open()) {
-        logfile << timeStamp << "," << State << "\n";
-        logfile.close(); // close the file
-    } else {
-        error -2;
-    }
-}
+void Logflagperson(string timestamp, string status){
 
-void* carCross(void* arrivalTime, void* carID, void* direc)  {    //function that thread will execute when crossing construction area
-    time_t a_time = *((time_t*)arrivalTime);
-    int cid = *((int*)carID);
-    int dir = *((int*)direc);
+    ofstream outdata("flagperson.log",ios::app);
+    outdata.is_open();
+    if (!outdata)
+    {
+        perror("Couldn't open flagperson file");
+        exit(1);
+    }
+    outdata << timestamp << setw(15) << status << endl;
+    outdata.close();
+}
+void* carCross(void*arg) {   
+    
+    sem_wait(&mutex);
+    car* my_car = (car*)(arg);
+    
+    pthread_detach(pthread_self());
+
 
     time_t s_time = time(0);//time car starts to cross construction lane
-    pthread_sleep(1);//car is crossing construction lane
+     
+    pthread_sleep(2);//car is crossing construction lane
+
     time_t e_time = time(0);//time car finishes crossing construction lane
-    logCar(cid,dir,a_time, s_time, e_time);
+   
+   id++;
+    
+    Logcar(id, my_car->directions, converter(my_car->arrivalTime), converter(s_time), converter(e_time));
+    sem_post(&mutex);
+    cout << "deleting carID: " << id << endl;
+    delete my_car;  //deallocate car object after completing crossing
     return NULL;
 }
+void* northCarGenerator(void* totaC) {
+    
 
+    int totalCars = *((int*)totaC);//cast input parameters
+    while (id < totalCars) {    
+        if (eightyCoin() == true) { 
 
-//------------------------BENS SECTION OF HELPER CODE-------------------------
+            sem_post(&isEmpty);
+            isEmptycount++;
+            sem_wait(&mutex); // potentially change lock name or use difefrent type of lock
+            car* newCar = new car('N', time(nullptr));//create car object DYNAMICALLY
+            if(newCar != nullptr) {
+                cout << "pushing carID: " << id << " into north queue" << endl;
+                northTrafficQueue.push(newCar); //add car into queue
+            } else {
+                cout << "Failed to create a new car object." << endl;
+            }
+            sem_post(&mutex); 
+            //cout << "total Produced: " << totalProduced << endl;
+        }
+        else {
+            cout << "breaktime: " << converter(time(nullptr)) << endl;
+            pthread_sleep(20); // sleep if another car does not follow
+            cout << "end of breaktime: " << converter(time(nullptr)) << endl;
+        }
+    }
+    pthread_exit(NULL);
+}
 
-queue<car> northTrafficQueue;
-queue<car> southTrafficQueue;
-sem_t mutex;
-sem_t empty;
+void* southCarGenerator(void* totaC) {
+   
 
-
+    int totalCars = *((int*)totaC); //cast input parameters
+    while (id < totalCars) { 
+        if (eightyCoin() == true) {            
+            sem_post(&isEmpty);
+            isEmptycount++;
+            sem_wait(&mutex); // potentially change lock name or use difefrent type of lock
+            car* newCar = new car('S', time(nullptr));//create car object DYNAMICALLY
+            if(newCar != nullptr) {
+                cout << "pushing carID: " << id << " into south queue" << endl;
+                southTrafficQueue.push(newCar); //add car into queue
+            } else {
+                cout << "Failed to create a new car object." << endl;
+            }
+            sem_post(&mutex); 
+            cout << "total Produced: " << id << endl;
+        }
+        else {
+            cout << "breaktime: " << converter(time(nullptr)) << endl;
+            pthread_sleep(20); // sleep if another car does not follow
+            cout << "end of breaktime: " << converter(time(nullptr)) << endl;
+        }
+       
+        
+    }
+    pthread_exit(NULL);
+}
 void* flagHandler(void* x) {
-    int totCars = *((int*) x); //see how many cars are allowed to pass cumulative 
-    char laneState = N;   //used to state which lane is currently being allowed to pass
-    int n_size=0;
-    int s_size=0;
-    car cartempn;
-    car cartemps;
-    clock_t tempSleepTime=0;
-    clock_t tempAwakeTime=0;
-    while(totCars != 0)    {
+
+    int carCnt = 0;
+    char laneState = 'N';   //used to state which lane is currently being allowed to pass
+    int n_size = 0;
+    int s_size = 0;
+    car* carTemp;
+    
+    
+    int totCars = *((int*) x); //see how many cars are allowed to pass cumulative
+    //creates threads for cumulative total of cars
+    vector<pthread_t> carThreads(totCars);
+
+    clock_t tempSleepTime = 0;
+    clock_t tempAwakeTime = 0;
+
+    while(totCars != carCnt)    {
+                
         tempSleepTime = time(nullptr);
-        sem_wait(&empty);   //will sleep thread if there is no cars waiting in either queues
+        cout << "isEmpty: " << isEmptycount << endl;
+        sem_wait(&isEmpty);   //will sleep thread if there is no cars waiting in either queues
+        isEmptycount--;
         tempAwakeTime = time(nullptr);
         sem_wait(&mutex);
-
-        cartempn=northTrafficQueue.front()->arrivalTime;
-        cartemps=southTrafficQueue.front()->arrivalTime;
+        
+        //update sizes for both queues
         s_size = getSouthSize();
         n_size = getNorthSize();
-
-
+        
         if(s_size>=10) {    //checks if any backups needed flow
             laneState = 'S';
         }
@@ -114,73 +225,124 @@ void* flagHandler(void* x) {
         }
 
         //if statement to check which lane should be allowed to pass first
-        if(s_size==0)   {
-            laneState = 'N';
-        }
-        else    {
+        if(s_size>0)   {
             laneState = 'S';
         }
+        else    {
+            laneState = 'N';
+        }
+        
+        //pops car from decided car queue
         switch (laneState)  {
             case 'N':
-                //take a car from N queue
+                carTemp = northTrafficQueue.front();
+                northTrafficQueue.pop();
+                cout << "CarID: " << id << " Was just popped from north queue." << endl;
                 break;
             case 'S':
-                //take a car from S queue
+                carTemp = southTrafficQueue.front();
+                southTrafficQueue.pop();
+                cout << "CarID: " << id << " Was just popped from south queue." << endl;
                 break;
             default:
-                return -1;
+                return NULL;
         }
 
+        //creates car thread for car object
         
-        sem_wait(&mutex);
-
-
+        if(pthread_create(&carThreads[carCnt], NULL, &carCross, (void *)carTemp)) {
+            perror("Pthread_create failed");
+            exit(-1);
+        }
+        sem_post(&mutex);
+        
         if(tempSleepTime < tempAwakeTime)  {// logging flagperson behavior
-            logFlag(tempSleepTime, "sleep");
-            logFlag(tempAwakeTime, "woken-up");
+            cout << "Sleep Time: " << converter(tempSleepTime) << " Wake Time: " << converter(tempAwakeTime) << endl; 
+            Logflagperson(converter(tempSleepTime), "sleep");
+            Logflagperson(converter(tempAwakeTime), "woken-up");
         }
-
-        //NOTE:CHECK IF WHAT IS CRITICAL SECTION IN THIS CODE
-        
+        //NOTE:CHECK IF WHAT IS CRITICAL SECTION IN THIS CODE   
+        carCnt++;
     }
-    
-
+    return NULL;
 }
 
 int getNorthSize()   {
-    int nSize = southTrafficQueue.size();
+    int nSize = northTrafficQueue.size();
+    cout << "North Queue Size: " << nSize << endl;
     return nSize;
 }
+
 int getSouthSize()   {
-    int sSize = northTrafficQueue.size();
+    int sSize = southTrafficQueue.size();
+    cout << "South Queue Size: " << sSize << endl;
     return sSize;
 }
-
-
-//------------------------BENS SECTION OF HELPER CODE-------------------------
 int main(int argc, char* argv[]) {
+    //obtaining total cars that will pass the lane in this code execution
     if (argc < 2) {
         return -1;
     }
     int cumCarsNum = stoi(argv[1]);
+
+    //create thread for 2 producers (North and South car generator), 1 consumer (flag person)
     pthread_t consumerThread;
-    //initializing mutex lock and empty semaphores for mutual exclusion/synchronization
+    pthread_t producerThreadN;
+    pthread_t producerThreadS;
+    
+    //initializing mutex lock and isEmpty semaphores for mutual exclusion/synchronization
     sem_init(&mutex, 0, 1);
-    sem_init(&empty, 0, 0);
+    sem_init(&isEmpty, 0, 0); //semaphore to check if no cars in either queue
 
-
-
-    //create producer, and their thread function  (car generators for North and South queue is producer)
-
-    //create consumer, and their thread function  (flag person consumes cars in queue)
-    if(pthread_create(&consumerThread, NULL, &flagHandler, (void *) cumCarsNum)) {
+    //setting up Consumer(flagperson) thread function with thread
+    if(pthread_create(&consumerThread, NULL, &flagHandler, (void *) &cumCarsNum)) {
         perror("Pthread_create failed");
         exit(-1);
     }
 
+    //setting up Producer(North car generator) thread function with thread
+    if(pthread_create(&producerThreadN, NULL, &northCarGenerator, (void *) &cumCarsNum)) {
+        perror("Pthread_create failed");
+        exit(-1);
+    }
+    //setting up Producer(South car generator) thread function with thread
+    if(pthread_create(&producerThreadS, NULL, &southCarGenerator, (void *) &cumCarsNum)) {
+        perror("Pthread_create failed");
+        exit(-1);
+    }
+    cout << "In Threads created" << endl;
+
+    if(pthread_join(consumerThread, NULL)) {
+        perror("Pthread_join failed");
+        exit(-2);
+    }
+    if(pthread_join(producerThreadN, NULL)) {
+        perror("Pthread_join failed");
+        exit(-2);
+    }
+    if(pthread_join(producerThreadS, NULL)) {
+        perror("Pthread_join failed");
+        exit(-2);
+    }
+    
+    
+    cout << "finished making pthreads" << endl;
+
+
+
+
     //deleting semaphores
     sem_destroy(&mutex);
-    sem_destroy(&empty);
+    sem_destroy(&isEmpty);
+
+
+
+
+
+
+
+
+
 
     //NOTE: THERE IS RACE CONDITION ON SHARED RESOURCE OF THE NORTH AND SOUTH QUEUES
     //use mutex lock for modification of queues
@@ -207,4 +369,3 @@ int main(int argc, char* argv[]) {
 
     
 }
-
