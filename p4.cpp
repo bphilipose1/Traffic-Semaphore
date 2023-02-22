@@ -326,7 +326,7 @@ int main(int argc, char* argv[]) {
         exit(-2);
     }
 
-    
+    pthread_sleep(4);
     //deleting pthread locks
     pthread_mutex_destroy(&mutexCarLog);
     pthread_mutex_destroy(&mutexQueue);
