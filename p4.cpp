@@ -262,6 +262,7 @@ void* flagHandler(void* x) {
             perror("Pthread_create failed");
             exit(-1);
         }
+        pthread_sleep(2);//
         if(tempSleepTime < tempAwakeTime)  {// logging flagperson behavior
             Logflagperson(converter(tempSleepTime), "sleep");
             Logflagperson(converter(tempAwakeTime), "woken-up");
