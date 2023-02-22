@@ -48,7 +48,7 @@ pthread_mutex_t mutexQueue; //for both queues
 
 // counting semaphore
 sem_t isEmpty;
-int isEmptycount;
+sem_t logDone;
 
 string converter(time_t convert){ // get the current time as a time_t value
     struct tm* timeinfo = localtime(&convert); // convert to local time
@@ -100,7 +100,9 @@ void Logcar(int ID,char Dir, string arrival_time, string start_time, string end_
     outdata.flush();
     outdata.close();
 
+
     pthread_mutex_unlock(&mutexCarLog);
+    sem_post(&logDone);
 }
 void Logflagperson(string timestamp, string status){
     ofstream outdata("flagperson.log",ios::app);
@@ -290,6 +292,7 @@ int main(int argc, char* argv[]) {
     pthread_t producerThreadS;
     
     //initialize empty semaphore
+    sem_init(&logDone, 0, -(cumCarsNum-1));
     sem_init(&isEmpty, 0, 0);
 
     //initialize pthread mutex locks
@@ -326,7 +329,9 @@ int main(int argc, char* argv[]) {
         exit(-2);
     }
 
-    pthread_sleep(4);
+    sem_wait(&logDone);
+
+
     //deleting pthread locks
     pthread_mutex_destroy(&mutexCarLog);
     pthread_mutex_destroy(&mutexQueue);
