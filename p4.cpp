@@ -86,9 +86,7 @@ bool eightyCoin()   {
         return false;
     }
 }
-void Logcar(int ID,char Dir, string arrival_time, string start_time, string end_time){
-    pthread_mutex_lock(&mutexCarLog);
-
+void Logcar(int ID,char Dir, string arrival_time, string start_time, string end_time)   {
     ofstream outdata("car.log",ios::app);
     outdata.is_open();
     if (!outdata)
@@ -99,11 +97,6 @@ void Logcar(int ID,char Dir, string arrival_time, string start_time, string end_
     outdata << ID << setw(7) << Dir << setw(10) <<arrival_time << setw(10) <<start_time << setw(10) << end_time << '\n';
     outdata.flush();
     outdata.close();
-
-    pthread_mutex_unlock(&mutexCarLog);
-    //cout << "logged" << endl;
-    sem_post(&logDone);
-
 }
 void Logflagperson(string timestamp, string status){
     ofstream outdata("flagperson.log",ios::app);
@@ -118,19 +111,19 @@ void Logflagperson(string timestamp, string status){
     outdata.close();
 }
 void* carCross(void*arg) {     
-    
-    pthread_detach(pthread_self());        
-    
+         
     car* my_car = (car*)(arg);
-    cout << "x" << endl;
+    
     time_t s_time = time(0);//time car starts to cross construction lane   
     pthread_sleep(2);//car is crossing construction lane
     time_t e_time = time(0);//time car finishes crossing construction lane
-    cout << "cross" << endl;
+    pthread_mutex_lock(&mutexCarLog);
     Logcar(my_car->carID, my_car->directions, converter(my_car->arrivalTime), converter(s_time), converter(e_time));
-
+    pthread_mutex_unlock(&mutexCarLog);
     delete my_car;  //deallocate car object after completing crossing
-    return NULL;
+    
+    sem_post(&logDone);
+    return NULL;   
 }
 void* northCarGenerator(void* totaC) {
     int totalCars = *((int*)totaC);//cast input parameters
@@ -150,22 +143,17 @@ void* northCarGenerator(void* totaC) {
                 totalProduced++;
             }
 
-            car* newCar = new car(totalProduced, 'N', time(nullptr));   //create car object DYNAMICALLY
-                        
+            car* newCar = new car(totalProduced, 'N', time(nullptr));   //create car object DYNAMICALLY              
+            
             if(newCar != nullptr) {
-
                 northTrafficQueue.push(newCar); //add car into queue
-                
             } else {
                 cout << "Failed to create a new car object." << endl;
             }
-            pthread_mutex_unlock(&mutexQueue);  //return lock after modifying queues
-            
+            pthread_mutex_unlock(&mutexQueue);  //return lock after modifying queues  
             sem_post(&isEmpty);
-            
         }   
         else {
-
             pthread_sleep(21); // sleep if another car does not follow
         }
     }
@@ -188,7 +176,6 @@ void* southCarGenerator(void* totaC) {
             }
             car* newCar = new car(totalProduced, 'S', time(nullptr));   //create car object DYNAMICALLY
             if(newCar != nullptr) {
-
                 southTrafficQueue.push(newCar); //add car into queue
             } else {
                 cout << "Failed to create a new car object." << endl;
@@ -205,17 +192,16 @@ void* southCarGenerator(void* totaC) {
 }
 void* flagHandler(void* x) {
     int carCnt = 0;
-    char laneState = 'N';   //used to state which lane is currently being allowed to pass
+    char laneState = 'N';   //used to state which lane is currently being allowed to pass default to N
     int n_size = 0;
     int s_size = 0;
     clock_t tempSleepTime = 0;
     clock_t tempAwakeTime = 0;
-    car* carTemp;
-    
+    car* carTemp;    
     int totCars = *((int*) x); //see how many cars are allowed to pass cumulative
-    
+
     //creates threads for cumulative total of cars
-    vector<pthread_t> carThreads(totCars);
+    pthread_t temp;
     
     while(totCars != carCnt)    {
         carCnt++;    
@@ -242,6 +228,7 @@ void* flagHandler(void* x) {
             laneState = 'N';
         }
         
+        //will pop from queue depending on laneState
         switch (laneState)  {
             case 'N':
                 carTemp = northTrafficQueue.front();
@@ -258,21 +245,17 @@ void* flagHandler(void* x) {
         pthread_mutex_unlock(&mutexQueue);
 
         //creates car thread for car object
-
-        if(pthread_create(&carThreads[(carCnt-1)], NULL, &carCross, (void *)carTemp)) {
+        if(pthread_create(&temp, NULL, &carCross, (void *)carTemp)) {
             perror("Pthread_create failed");
             exit(-1);
         }
-        
+        pthread_detach(temp);//detach thread    
         if(tempSleepTime < tempAwakeTime)  {// logging flagperson behavior
             Logflagperson(converter(tempSleepTime), "sleep");
             Logflagperson(converter(tempAwakeTime), "woken-up");
         }
     }
-
-    //cout << "s" << converter(time(nullptr))<< endl;
-    sem_wait(&logDone);
-    //cout << "e" << converter(time(nullptr))<< endl;
+    sem_wait(&logDone);//try to exit consumer, will wait if not all threads finished
     return NULL;
 }
 int getNorthSize()   {
@@ -298,8 +281,7 @@ int main(int argc, char* argv[]) {
     
     //initialize empty semaphore
     sem_init(&isEmpty, 0, 0);
-    cout << "logDone set:" << (-cumCarsNum)+1 << endl;
-    sem_init(&logDone, 0, ((-cumCarsNum)+1));
+    sem_init(&logDone, 0, ((-cumCarsNum)+1));//dont let consumer exit before all car threads are done
 
     //initialize pthread mutex locks
     pthread_mutex_init(&mutexCarLog, NULL);
@@ -321,7 +303,6 @@ int main(int argc, char* argv[]) {
         exit(-1);
     }
 
-
     if(pthread_detach(producerThreadN)) {
         perror("Pthread_detach failed");
         exit(-2);
@@ -330,12 +311,13 @@ int main(int argc, char* argv[]) {
         perror("Pthread_detach failed");
         exit(-2);
     }
-
-    //using pthread_join to not allow main to exit prematurily
+    //using pthread_join when consumer is done, to not allow main to exit prematurily
     if(pthread_join(consumerThread, NULL)) {
         perror("Pthread_join failed");
         exit(-2);
     }
+    //sleep main for a few secconds to let threads wrap up
+    pthread_sleep((5));
 
     //deleting pthread locks
     pthread_mutex_destroy(&mutexCarLog);
